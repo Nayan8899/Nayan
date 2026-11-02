@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch: # 👈 This adds the "Run workflow" button to your GitHub UI
 
 jobs:
   terraform:
@@ -35,7 +36,6 @@ jobs:
         rm -rf .terraform .terraform.lock.hcl
         terraform init -upgrade
 
-    # FIX: Using verified safe version v0.36.0 placed optimally after init
     - name: Run Trivy Security Scan
       uses: aquasecurity/trivy-action@v0.36.0 
       with:
@@ -44,6 +44,7 @@ jobs:
         format: 'table'
         exit-code: '1'
         severity: 'CRITICAL,HIGH'
+        skip-dirs: '.terraform' # 👈 Prevents Trivy from scanning large provider files
 
     - name: Execute Security Verified Plan
       run: |
@@ -57,5 +58,5 @@ jobs:
         path: file.txt
 
     - name: Automated Infrastructure Rollout
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
       run: terraform apply -auto-approve
