@@ -1,25 +1,51 @@
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 provider "aws" {
   region = "ap-south-1"
 }
 
-resource "aws_instance" "mumbai_servers" {
-  count         = 2
-  ami           = "ami-0dee22c13ea7a9a67" # Hardcoded official Ubuntu 24.04 AMI for ap-south-1 (Mumbai)
-  instance_type = "t2.micro"
+# 1. Create a Customer Managed KMS Key for absolute compliance
+resource "aws_kms_key" "mykey" {
+  description             = "KMS key for S3 bucket encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true # Satisfies best-practice security frameworks
+}
 
-  # Satisfies Trivy security rule AWS-0028
-  metadata_options {
-    http_tokens = "required"
-  }
-
-  # FIX: Satisfies Trivy security rule AWS-0131
-  root_block_device {
-    encrypted             = true
-    volume_type           = "gp3"
-    delete_on_termination = true
-  }
+# 2. The main S3 Bucket
+resource "aws_s3_bucket" "my_bucket" {
+  bucket_prefix = "nayan-project-bucket-"
 
   tags = {
-    Name = "Nayan-Server-${count.index + 1}"
+    Name        = "Nayan-Storage-Bucket"
+    Environment = "Dev"
+  }
+}
+
+# 3. Block all public access
+resource "aws_s3_bucket_public_access_block" "public_block" {
+  bucket                  = aws_s3_bucket.my_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# 4. Enforce server-side encryption via our Customer Managed Key (Fixes AWS-0132)
+resource "aws_s3_bucket_server_side_encryption_configuration" "sse_config" {
+  bucket = aws_s3_bucket.my_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.mykey.arn
+      sse_algorithm     = "aws:kms"
+    }
   }
 }
