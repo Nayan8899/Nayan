@@ -15,7 +15,7 @@ provider "aws" {
 resource "aws_s3_bucket" "my_bucket" {
   # S3 bucket names must be unique worldwide. 
   # Using 'bucket_prefix' lets AWS add random numbers to the end so it never fails.
-  bucket_prefix = "nayan-project-bucket-" 
+  bucket_prefix = "nayan-project-bucket-"
 
   tags = {
     Name        = "Nayan-Storage-Bucket"
