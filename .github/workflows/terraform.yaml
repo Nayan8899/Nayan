@@ -22,15 +22,15 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    # Fix: Run Trivy FIRST so it only scans your main.tf code, ignoring provider binaries
-    - name: Run Trivy Security Scan
-      uses: aquasecurity/trivy-action@0.28.0
+    #    - name: Run Trivy Security Scan
+      uses: aquasecurity/trivy-action@v0.28.0 # Added the required 'v' prefix
       with:
         scan-type: 'config'
         hide-progress: false
         format: 'table'
         exit-code: '1'
         severity: 'CRITICAL,HIGH'
+
 
     - name: Setup Terraform Engine
       uses: hashicorp/setup-terraform@v3
