@@ -16,21 +16,20 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: 'ap-south-1' # Matched to Mumbai region from your main.tf
+      AWS_DEFAULT_REGION: 'ap-south-1' 
 
     steps:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    #    - name: Run Trivy Security Scan
-      uses: aquasecurity/trivy-action@v0.28.0 # Added the required 'v' prefix
+    - name: Run Trivy Security Scan
+      uses: aquasecurity/trivy-action@v0.28.0 
       with:
         scan-type: 'config'
         hide-progress: false
         format: 'table'
         exit-code: '1'
         severity: 'CRITICAL,HIGH'
-
 
     - name: Setup Terraform Engine
       uses: hashicorp/setup-terraform@v3
