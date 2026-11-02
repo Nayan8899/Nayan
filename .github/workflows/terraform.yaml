@@ -13,18 +13,18 @@ jobs:
     name: 'Terraform'
     runs-on: ubuntu-latest
 
-    # Global environment variables injected into all steps
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: 'us-east-1' # Change to your preferred target region
+      AWS_DEFAULT_REGION: 'ap-south-1' # Matched to Mumbai region from your main.tf
 
     steps:
-    - name: Checkout
+    - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
+    # Fix: Run Trivy FIRST so it only scans your main.tf code, ignoring provider binaries
+    - name: Run Trivy Security Scan
+      uses: aquasecurity/trivy-action@0.28.0
       with:
         scan-type: 'config'
         hide-progress: false
@@ -32,28 +32,31 @@ jobs:
         exit-code: '1'
         severity: 'CRITICAL,HIGH'
 
-    - name: Setup Terraform
+    - name: Setup Terraform Engine
       uses: hashicorp/setup-terraform@v3
       with:
-        terraform_version: 1.6.0
+        terraform_version: 1.9.8 
 
-    - name: Terraform Init
-      run: terraform init
-
-    - name: Terraform Format
+    - name: Verify Code Formatting
       run: terraform fmt -check
 
-    - name: Terraform Plan
+    - name: Initialize Backend and Providers
+      run: |
+        rm -rf .terraform .terraform.lock.hcl
+        terraform init -upgrade
+
+    # Fix: Placed after initialization so it can generate an accurate plan against AWS
+    - name: Execute Security Verified Plan
       run: |
         terraform plan -no-color > file.txt
         cat file.txt
 
-    - name: Upload Plan Output
+    - name: Upload Plan Artifact
       uses: actions/upload-artifact@v4
       with:
         name: terraform-plan-output
         path: file.txt
 
-    - name: Terraform Apply
+    - name: Automated Infrastructure Rollout
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve
