@@ -1,4 +1,3 @@
-
 provider "aws" {
   region = "ap-south-1"
 }
@@ -11,6 +10,13 @@ resource "aws_instance" "mumbai_servers" {
   # Satisfies Trivy security rule AWS-0028
   metadata_options {
     http_tokens = "required"
+  }
+
+  # FIX: Satisfies Trivy security rule AWS-0131
+  root_block_device {
+    encrypted             = true
+    volume_type           = "gp3"
+    delete_on_termination = true
   }
 
   tags = {
