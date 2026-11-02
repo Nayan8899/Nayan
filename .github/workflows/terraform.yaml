@@ -22,15 +22,6 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    - name: Run Trivy Security Scan
-      uses: aquasecurity/trivy-action@v0.28.0 
-      with:
-        scan-type: 'config'
-        hide-progress: false
-        format: 'table'
-        exit-code: '1'
-        severity: 'CRITICAL,HIGH'
-
     - name: Setup Terraform Engine
       uses: hashicorp/setup-terraform@v3
       with:
@@ -44,7 +35,16 @@ jobs:
         rm -rf .terraform .terraform.lock.hcl
         terraform init -upgrade
 
-    # Fix: Placed after initialization so it can generate an accurate plan against AWS
+    # FIX: Using verified safe version v0.36.0 placed optimally after init
+    - name: Run Trivy Security Scan
+      uses: aquasecurity/trivy-action@v0.36.0 
+      with:
+        scan-type: 'config'
+        hide-progress: false
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+
     - name: Execute Security Verified Plan
       run: |
         terraform plan -no-color > file.txt
