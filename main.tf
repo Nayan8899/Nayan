@@ -12,7 +12,14 @@ provider "aws" {
   region = "ap-south-1"
 }
 
-# The main S3 Bucket
+# 1. Create a Customer Managed KMS Key for absolute compliance
+resource "aws_kms_key" "mykey" {
+  description             = "KMS key for S3 bucket encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true # Satisfies best-practice security frameworks
+}
+
+# 2. The main S3 Bucket
 resource "aws_s3_bucket" "my_bucket" {
   bucket_prefix = "nayan-project-bucket-"
 
@@ -22,7 +29,7 @@ resource "aws_s3_bucket" "my_bucket" {
   }
 }
 
-# Fix for AWS-0086, AWS-0087, AWS-0091, AWS-0093: Explicitly block all public access
+# 3. Block all public access
 resource "aws_s3_bucket_public_access_block" "public_block" {
   bucket                  = aws_s3_bucket.my_bucket.id
   block_public_acls       = true
@@ -31,13 +38,14 @@ resource "aws_s3_bucket_public_access_block" "public_block" {
   restrict_public_buckets = true
 }
 
-# Fix for AWS-0132: Enforce default server-side encryption
+# 4. Enforce server-side encryption via our Customer Managed Key (Fixes AWS-0132)
 resource "aws_s3_bucket_server_side_encryption_configuration" "sse_config" {
   bucket = aws_s3_bucket.my_bucket.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256" # Safely clears security warnings without creating extra KMS costs
+      kms_master_key_id = aws_kms_key.mykey.arn
+      sse_algorithm     = "aws:kms"
     }
   }
 }
